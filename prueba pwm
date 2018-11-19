@@ -1,0 +1,50 @@
+/*
+INDICE DE SALIDAS
+PWM3	CTOUT0	T_FIL2
+PWM4	CTOUT3	T_FIL3
+PWM5	CTOUT13	T_COL1
+PWM6	CTOUT7	GPIO8
+PWM7	CTOUT2	LED1
+PWM8	CTOUT5	LED2
+PWM9	CTOUT4	LED3
+PWM10	CTOUT6	GPIO2
+*/
+
+/*==================[inclusions]=============================================*/
+
+//#include "led_sequences.h"   // <= own header (optional)
+#include "sapi.h"              // <= sAPI header
+
+/* FUNCION PRINCIPAL, PUNTO DE ENTRADA AL PROGRAMA LUEGO DE RESET. */
+int main(void){
+
+   /* ------------- INICIALIZACIONES ------------- */
+
+   /* Inicializar la placa */
+   boardConfig();
+
+   int8_t duty1 = 100;
+   int8_t duty2 = 100;
+	
+   pwmConfig( 0, PWM_ENABLE );
+   pwmConfig( PWM3, PWM_ENABLE_OUTPUT ); // T_FIL2
+   pwmConfig( PWM4, PWM_ENABLE_OUTPUT ); // T_FIL3
+   delay(1000);
+   pwmWrite( PWM3, duty1 );
+   delay(1000);
+   pwmWrite( PWM3, 0 );
+   
+   /* ------------- REPETIR POR SIEMPRE ------------- */
+   while(1) {
+
+	delay(1000);
+	
+     
+   }
+
+   /* NO DEBE LLEGAR NUNCA AQUI, debido a que a este programa no es llamado
+      por ningun S.O. */
+   return 0 ;
+}
+
+/*==================[end of file]============================================*/

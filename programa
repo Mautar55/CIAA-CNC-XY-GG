@@ -1,0 +1,266 @@
+/*
+INDICE DE SALIDAS
+PWM0    CTOUT1   T_FIL1
+PWM1    CTOUT12  T_COL2
+PWM2    CTOUT10  T_COL0
+PWM3    CTOUT0   T_FIL2
+PWM4    CTOUT3   T_FIL3
+PWM5    CTOUT13  T_COL1
+PWM6    CTOUT7   GPIO8
+PWM7    CTOUT2   LED1
+PWM8    CTOUT5   LED2
+PWM9    CTOUT4   LED3
+PWM10   CTOUT6   GPIO2
+*/
+
+/* RECUENTO DE SALIDAS
+4 PWM PARA MOTORES X (HORARIO,ANTIHORARIO)
+2 PWM PARA MOTORES Y (IGUAL)
+1 PARA EL SERVO
+
+RECUENTO DE ENTRADAS
+4 PARA CADA FINAL DE LAS ESQUINAS
+2 PARA SENSORES
+
+*/
+/*==================[inclusions]=============================================*/
+
+//#include "led_sequences.h"   // <= own header (optional)
+#include "sapi.h"              // <= sAPI header
+
+/* FUNCION PRINCIPAL, PUNTO DE ENTRADA AL PROGRAMA LUEGO DE RESET. */
+int main(void){
+
+   /* ------------- INICIALIZACIONES ------------- */
+
+   /* Inicializar la placa */
+   boardConfig();
+   gpioConfig( 0, GPIO_ENABLE );
+
+   delay(2000);
+
+	// DECLARACION DE VARIABLES DE PINES DE LIMITES
+	gpioConfig(GPIO0, GPIO_INPUT); // +x
+	gpioConfig(GPIO1, GPIO_INPUT); // +y
+	gpioConfig(GPIO2, GPIO_INPUT); // -x
+	gpioConfig(GPIO3, GPIO_INPUT); // -y
+	uint8_t maxx = 0;
+	uint8_t maxy = 0;
+	
+	// DECLARACION DE SALIDAS DE MOTORES
+	uint8_t dutyx = 100;
+	uint8_t dutyy = 100;
+
+    pwmConfig( 0, PWM_ENABLE );
+
+    pwmConfig( PWM0, PWM_ENABLE_OUTPUT ); // T_FIL1 X1 H
+    pwmConfig( PWM3, PWM_ENABLE_OUTPUT ); // T_FIL2 X1 AH
+    pwmConfig( PWM4, PWM_ENABLE_OUTPUT ); // T_FIL3 X2 H
+    pwmConfig( PWM2, PWM_ENABLE_OUTPUT ); // T_COL0 X2 AH
+	pwmConfig( PWM5, PWM_ENABLE_OUTPUT ); // T_COL1 Y H
+    pwmConfig( PWM1, PWM_ENABLE_OUTPUT ); // T_COL2 Y AH
+
+	//pwmWrite( PWMu, dutyu );
+    //pwmWrite( PWMu, 0 );
+
+	servoConfig(SERVO4, GPIO_OUTPUT); // SERVO EN GPIO8
+
+	// DECLARACION DE ENTRADAS DE SENSORES
+	gpioConfig(GPIO4, GPIO_INPUT); // X
+	gpioConfig(GPIO5, GPIO_INPUT); // Y
+	uint8_t lastx = 0;
+	uint8_t lasty = 0;
+	uint8_t auxx = 0;
+	uint8_t auxy = 0;
+	
+	// SERIAL
+	uartConfig(UART_USB,115200);
+	uint8_t serialin =0;
+	uint8_t serialout =0;	
+	uartWriteByte(UART_USB, 'R');
+	uartWriteByte(UART_USB, '-');
+	uartWriteByte(UART_USB, 'L');
+	uartWriteByte(UART_USB, 'I');
+	uartWriteByte(UART_USB, 'S');
+	uartWriteByte(UART_USB, 'T');
+	uartWriteByte(UART_USB, 'O');
+	uartWriteByte(UART_USB, '\n');
+	
+	uint8_t pp =1;
+	while(pp) {
+		if(uartReadByte(UART_USB, &serialin)) {
+			if(serialin == 82) {
+				uartWriteByte(UART_USB, 'G');
+				uartWriteByte(UART_USB, 'G');
+				uartWriteByte(UART_USB, '\n');
+				pp = 0;
+			}
+		}
+	}
+
+	// direccion a izq
+	pwmWrite( PWM3, dutyx );
+	pwmWrite( PWM2, dutyx );
+	while (!gpioRead(GPIO2)) {
+		// no hace nada xd
+	}
+	pwmWrite( PWM3, 0 );
+	pwmWrite( PWM2, 0 );
+
+	// direccion abajo
+	pwmWrite( PWM1, dutyy );
+	while (!gpioRead(GPIO3)) {
+		// no hace nada xd
+	}
+	pwmWrite( PWM1, 0 );
+	
+	uartWriteByte(UART_USB, '0');
+	
+	//////////////////////////////////
+	// comienza a medirse X hacia derecha
+	pwmWrite( PWM0, dutyx );
+	pwmWrite( PWM4, dutyx );
+	while (!gpioRead(GPIO0)) {
+		auxx = lastx;
+		lastx = gpioRead(GPIO4);
+		if (auxx != lastx) {
+				maxx = maxx +1;
+		}
+	}
+	pwmWrite( PWM0, 0 );
+	pwmWrite( PWM4, 0 );
+
+	// comienza a medirse Y hacia arriba
+	pwmWrite( PWM5, dutyy );
+	while (!gpioRead(GPIO1)) {
+		auxy = lasty;
+		lasty = gpioRead(GPIO4);
+		if (auxy != lasty) {
+				maxy = maxy +1;
+		}
+	}
+	pwmWrite( PWM5, 0 );
+	
+	uartWriteByte(UART_USB, 'V');
+
+   ///// VOLVER A 0!
+	// direccion a izq
+	pwmWrite( PWM3, dutyx );
+	pwmWrite( PWM2, dutyx );
+	while (!gpioRead(GPIO2)) {
+		// no hace nada xd
+	}
+	pwmWrite( PWM3, 0 );
+	pwmWrite( PWM2, 0 );
+
+	// direccion abajo
+	pwmWrite( PWM1, dutyy );
+	while (!gpioRead(GPIO3)) {
+		// no hace nada xd
+	}
+	pwmWrite( PWM1, 0 );
+	
+	uartWriteByte(UART_USB, '0');
+
+   // Salir de contacto con bordes
+	// direccion a der
+	pwmWrite( PWM0, dutyx );
+	pwmWrite( PWM4, dutyx );
+	while (gpioRead(GPIO2)) {
+		// no hace nada xd
+	}
+	pwmWrite( PWM0, 0 );
+	pwmWrite( PWM4, 0 );
+
+	// direccion arriba
+	pwmWrite( PWM5, dutyy );
+	while (gpioRead(GPIO3)) {
+		// no hace nada xd
+	}
+	pwmWrite( PWM5, 0 );
+	
+	uartWriteByte(UART_USB, 'Q');
+	
+	char sstr[10] = "0000000000";
+	int sernum = 0;
+	
+	uartWriteByte(UART_USB, 'R');
+	
+	uartWriteByte(UART_USB, '\n');
+
+   /* ------------- REPETIR POR SIEMPRE ------------- */
+   while(1) {
+		/*
+		El proceso que se lleva a cabo para trazar lineas es el siguiente:
+		La placa recibira un por uart un codigo en sucesion de 10 caracteres
+		ascii que implica la operacion a realizar.
+
+		{M,Q}: S implica comienzo de la orden de desplazamiento o Q de
+		cambio de estado del servo lapiz (de ser como el ultimo la orden termina).
+		{X,Y}: Indica sobre que eje ira la orden.
+		{+,-}: Indica sentido de los motores.
+		[6] caracteres numericos en sucesion que indican la longitud de
+		desplazamiento relativo.
+		{F}: Indica fin de orden de desplazamiento.
+
+		Comienza leyendo un caracter, si es la Q cambia el estado del lapiz y
+		vuelve a empezar la lectura. Si es una M lee los otros 9.
+		Guardara en una variable entera el numero representado por los caracteres
+		entre (incluidos) 4 y 9, mediante un bucle que lee cada uno desde el primero
+		aplicando la funcion:
+				N = N + 6-(Posicion - 2)*(10^posicion_caracter_ascii_respectoa0) 
+		*/
+		//uartConfig(UART_USB,115200);
+		//uint8_t serialin =0;
+		//uint8_t serialout =0;
+		/*
+		uartReadByte(UART_USB, &serialin)
+		uartWriteByte(UART_USB, 'G');
+		char sstr[10] = "0000000000";	     */
+		
+		if(uartReadByte(UART_USB, sstr[0])){
+		
+			if (sstr[0] == 'Q') {
+			// CAMBIAR ESTADO DEL SERVO
+			} else if (sstr[0] == 'M') {
+				uartReadByte(UART_USB, sstr[1]);
+				uartReadByte(UART_USB, sstr[2]);
+				uartReadByte(UART_USB, sstr[3]);
+				uartReadByte(UART_USB, sstr[4]);
+				uartReadByte(UART_USB, sstr[5]);
+				uartReadByte(UART_USB, sstr[6]);
+				uartReadByte(UART_USB, sstr[7]);
+				uartReadByte(UART_USB, sstr[8]);
+				uartReadByte(UART_USB, sstr[9]);
+				
+				sernum = sstr[8] * 1 + sstr[7] * 10 + sstr[6] *100 + sstr[5] *1000 + sstr[4] * 10000 + sstr[3] * 100000;
+				
+				if (sstr[1] == 'X') {
+					if (sstr[2] == '+'){
+						// moverse sernum en x+
+						
+					} else if (sstr[2] == '-') {
+						// moverse sernum en x-
+					}
+					
+				} else if (sstr[1] == 'Y') {
+					if (sstr[2] == '+'){
+						// moverse sernum en y+
+						
+					} else if (sstr[2] == '-') {
+						// moverse sernum en y-
+					}
+					
+				}
+			}
+		
+		}
+     
+   }
+
+   /* NO DEBE LLEGAR NUNCA AQUI, debido a que a este programa no es llamado
+      por ningun S.O. */
+   return 0 ;
+}
+
+/*==================[end of file]============================================*/
